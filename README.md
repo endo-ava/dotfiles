@@ -38,6 +38,7 @@
 - `bash/`: Bashの設定 (`.bashrc`, `.bash_aliases` など)
 - `git/`: Gitの設定 (`.gitconfig`, `.gitignore_global`)
 - `vscode/`: VS Code の設定
+- `agents/`: AIエージェント用の命令・ルールファイル集
 - `scripts/`: 自作のユーティリティスクリプト
 
 ## 🌲 ディレクトリ構成
@@ -47,6 +48,8 @@
 ├── README.md
 ├── install.sh
 ├── .bash_local (optional, ignored)
+├── agents/             # AI Agent用ルール
+│   └── AGENTS.md       # 環境サマリー + 共通ルール (Master)
 ├── bash/
 │   ├── .bash_aliases
 │   └── .bashrc

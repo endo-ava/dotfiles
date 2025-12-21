@@ -108,13 +108,17 @@ install_python_env() {
     
     if ! exists uv; then
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        
-        # 現在のシェル環境にパスを反映
-        # ~/.local/bin または ~/.cargo/bin の可能性を考慮
-        [ -f "$HOME/.local/bin/env" ] && source "$HOME/.local/bin/env"
-        [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
     else
-        echo "uv is already installed."
+         echo "uv is already installed."
+    fi
+
+    # 現在のセッションのPATHに反映 (install.sh の後半で uv を使う可能性があるため)
+    # uv はデフォルトで ~/.local/bin に入る
+    export PATH="$HOME/.local/bin:$PATH"
+    
+    # cargo環境がある場合も考慮
+    if [ -f "$HOME/.cargo/env" ]; then
+        source "$HOME/.cargo/env"
     fi
 }
 
@@ -126,17 +130,22 @@ install_node_env() {
     
     export NVM_DIR="$HOME/.nvm"
     if [ ! -d "$NVM_DIR" ]; then
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
     fi
 
     # nvmをロード
+    set +u
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    
     # LTS版のインストールと適用
     if ! exists node; then
+        echo "Installing Node.js LTS..."
         nvm install --lts
         nvm use --lts
+        nvm alias default 'lts/*'
     fi
+    set -u
 
     log "npmグローバルパッケージのインストール"
     local npm_packages=(
@@ -172,15 +181,31 @@ apply_dotfiles() {
     log "Dotfilesのリンク適用 (Stow)"
     
     # スクリプトが存在するディレクトリに移動
-    cd "$(dirname "$0")"
+    cd "$(dirname "$0")" || return
 
     # 管理対象のディレクトリリスト
-    local targets=(bash git code-server)
+    local targets=(bash git vscode agents)
 
     for target in "${targets[@]}"; do
         if [ -d "$target" ]; then
             echo "Stowing $target..."
-            stow "$target"
+            # stowのシミュレーションを実行して衝突を確認
+            # 衝突がある場合（実ファイルが存在する場合）、それらをバックアップする
+            # pipefail対策として、一時的にセットを解除するか、パイプの出口で真を返す
+            local conflicts
+            conflicts=$(stow -n -R "$target" 2>&1 | grep "existing target is neither a link nor a directory" | awk '{print $NF}' || true)
+            
+            if [ -n "$conflicts" ]; then
+                echo "$conflicts" | while read -r file; do
+                    if [ -f "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
+                        echo "Backing up existing file: $HOME/$file to $HOME/$file.bak"
+                        mv "$HOME/$file" "$HOME/$file.bak"
+                    fi
+                done
+            fi
+
+            # リンクの適用
+            stow -R "$target"
         else
             echo "Skipping $target (directory not found)"
         fi

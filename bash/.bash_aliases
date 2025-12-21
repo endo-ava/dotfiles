@@ -23,3 +23,14 @@ alias gcm='git commit -m'
 alias gpl='git pull'
 alias gps='git push'
 alias glo='git log --oneline --graph'
+
+# 🤖 AI Agent Helpers
+# 現在のディレクトリにエージェント用ルールファイルをリンクする
+ai-rules() {
+    local target_dir="${1:-.}"
+    ln -sf ~/dotfiles/agents/CLAUDE.md "$target_dir/CLAUDE.md"
+    ln -sf ~/dotfiles/agents/GEMINI.md "$target_dir/GEMINI.md"
+    # AGENTS.md への直接リンクも予備として作成
+    ln -sf ~/dotfiles/agents/AGENTS.md "$target_dir/AGENTS.md"
+    echo "AI Agent rules (CLAUDE.md, GEMINI.md, AGENTS.md) linked to $target_dir"
+}
