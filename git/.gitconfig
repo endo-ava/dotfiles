@@ -1,0 +1,16 @@
+[user]
+	name = ryuto.endo
+	email = ryuto9007@gmail.com
+[core]
+	editor = nano
+	excludesfile = ~/.gitignore_global
+[alias]
+	st = status
+	co = checkout
+	br = branch
+	ci = commit
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+[init]
+	defaultBranch = main
+[pull]
+	rebase = false
