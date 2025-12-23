@@ -217,46 +217,62 @@ apply_dotfiles() {
 }
 
 # ------------------------------------------
-# 8. Secret Service (GNOME Keyring)
-# ------------------------------------------
-# ------------------------------------------
 # 8. Secret Service (GNOME Keyring with PAM)
 # ------------------------------------------
+
+# PAM設定行の追加ヘルパー
+ensure_pam_line() {
+    local file="$1"
+    local line="$2"
+    # ファイルが存在する場合のみ処理
+    if [ -f "$file" ]; then
+        if ! grep -qxF "$line" "$file"; then
+             echo "Adding '$line' to $file"
+             echo "$line" | sudo tee -a "$file" >/dev/null
+        else
+             echo "$file already configured."
+        fi
+    fi
+}
+
 configure_pam_keyring() {
     log "PAM設定 (gnome-keyring) の適用"
 
-    # libpam-gnome-keyring がインストールされているか確認
+    # パッケージの確認とインストール
+    local pam_pkgs="gnome-keyring libpam-gnome-keyring"
     if ! dpkg -l | grep -q libpam-gnome-keyring; then
-        echo "libpam-gnome-keyring not found. Installing..."
-        sudo apt install -y libpam-gnome-keyring
+        echo "Installing gnome-keyring and pam module..."
+        sudo apt install -y $pam_pkgs
     fi
 
-    # PAM設定ファイルへの追記 (冪等性を考慮)
-    # 1. /etc/pam.d/login (TTYログイン用)
-    if [ -f /etc/pam.d/login ]; then
-        if ! grep -q "pam_gnome_keyring.so" /etc/pam.d/login; then
-            echo "Adding gnome-keyring to /etc/pam.d/login..."
-            # 末尾に追加 (簡易的な適用)
-            echo "auth    optional    pam_gnome_keyring.so" | sudo tee -a /etc/pam.d/login >/dev/null
-            echo "session optional    pam_gnome_keyring.so auto_start" | sudo tee -a /etc/pam.d/login >/dev/null
-        else
-            echo "/etc/pam.d/login already configured."
+    # Debian/Ubuntu標準: common-session / common-password に設定を寄せる
+    # これにより login / sshd 両方で一貫した挙動になる
+    
+    # login時: keyring daemonを自動起動 (auto_start)
+    ensure_pam_line "/etc/pam.d/common-session" "session optional pam_gnome_keyring.so auto_start"
+    
+    # パスワード変更/入力時: keyringの解錠を同期
+    ensure_pam_line "/etc/pam.d/common-password" "password optional pam_gnome_keyring.so"
+
+    # Keyringディレクトリの作成 (sudo実行時でも本来のユーザーの権限で作成)
+    local target_user="${SUDO_USER:-$USER}"
+    local target_home
+    # getentで確実にホームディレクトリを取得
+    if command -v getent >/dev/null; then
+        target_home="$(getent passwd "$target_user" | cut -d: -f6)"
+    else
+        target_home="$HOME"
+    fi
+
+    if [ -n "$target_home" ]; then
+        local keyring_dir="$target_home/.local/share/keyrings"
+        if [ ! -d "$keyring_dir" ]; then
+            echo "Creating keyring directory: $keyring_dir"
+            mkdir -p "$keyring_dir"
+            # 所有権の修正
+            chown -R "$target_user" "$keyring_dir"
         fi
     fi
-
-    # 2. /etc/pam.d/sshd (SSHログイン用)
-    if [ -f /etc/pam.d/sshd ]; then
-         if ! grep -q "pam_gnome_keyring.so" /etc/pam.d/sshd; then
-            echo "Adding gnome-keyring to /etc/pam.d/sshd..."
-            echo "auth    optional    pam_gnome_keyring.so" | sudo tee -a /etc/pam.d/sshd >/dev/null
-            echo "session optional    pam_gnome_keyring.so auto_start" | sudo tee -a /etc/pam.d/sshd >/dev/null
-         else
-            echo "/etc/pam.d/sshd already configured."
-         fi
-    fi
-
-    # Keyringディレクトリの作成だけはしておく
-    mkdir -p "$HOME/.local/share/keyrings"
 }
 
 # ==========================================
