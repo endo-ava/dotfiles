@@ -32,6 +32,7 @@ install_base_packages() {
     local packages=(
         curl wget git unzip tar jq
         build-essential
+        libsecret-1-dev
         stow
         python3-pip python3-venv
     )

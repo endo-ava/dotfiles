@@ -14,3 +14,11 @@
 	defaultBranch = main
 [pull]
 	rebase = false
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[coderabbit]
+	machineId = cli/713deffa66334a68b114868902b4a03f

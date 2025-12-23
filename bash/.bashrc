@@ -15,27 +15,15 @@ fi
 # 🔧 Tool Initializations
 # ==========================================
 
-# 1. Rust & uv Env (Path)
-if [ -f "$HOME/.cargo/env" ]; then
-    . "$HOME/.cargo/env"
-elif [ -f "$HOME/.local/bin/env" ]; then
-    . "$HOME/.local/bin/env"
-fi
-
-# 2. NVM (Node Version Manager)
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# 3. Zoxide (Smart cd)
+# 1. Zoxide (Smart cd)
 if command -v zoxide &> /dev/null; then
     eval "$(zoxide init bash)"
 fi
 
-# 4. fzf (Fuzzy Finder)
+# 2. fzf (Fuzzy Finder)
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
-# 5. Direnv (もし入れたら)
+# 3. Direnv (もし入れたら)
 if command -v direnv &> /dev/null; then
     eval "$(direnv hook bash)"
 fi
