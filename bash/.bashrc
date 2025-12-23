@@ -3,9 +3,6 @@
 # プロンプトの設定 (シンプル)
 export PS1='\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
 
-# パスの追加
-export PATH="$HOME/.local/bin:$PATH"
-
 # エイリアスの読み込み
 if [ -f ~/.bash_aliases ]; then
     . ~/.bash_aliases

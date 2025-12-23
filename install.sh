@@ -29,10 +29,13 @@ install_base_packages() {
     sudo apt update && sudo apt upgrade -y
     
     # リストを見やすく整理
+    # gnome-keyring: 資格情報の保存
+    # dbus-user-session: アプリと資格情報のやり取り
     local packages=(
         curl wget git unzip tar jq
         build-essential
         libsecret-1-dev
+        gnome-keyring libsecret-1-0 libsecret-tools dbus-user-session
         stow
         python3-pip python3-venv
     )
@@ -213,6 +216,49 @@ apply_dotfiles() {
     done
 }
 
+# ------------------------------------------
+# 8. Secret Service (GNOME Keyring)
+# ------------------------------------------
+# ------------------------------------------
+# 8. Secret Service (GNOME Keyring with PAM)
+# ------------------------------------------
+configure_pam_keyring() {
+    log "PAM設定 (gnome-keyring) の適用"
+
+    # libpam-gnome-keyring がインストールされているか確認
+    if ! dpkg -l | grep -q libpam-gnome-keyring; then
+        echo "libpam-gnome-keyring not found. Installing..."
+        sudo apt install -y libpam-gnome-keyring
+    fi
+
+    # PAM設定ファイルへの追記 (冪等性を考慮)
+    # 1. /etc/pam.d/login (TTYログイン用)
+    if [ -f /etc/pam.d/login ]; then
+        if ! grep -q "pam_gnome_keyring.so" /etc/pam.d/login; then
+            echo "Adding gnome-keyring to /etc/pam.d/login..."
+            # 末尾に追加 (簡易的な適用)
+            echo "auth    optional    pam_gnome_keyring.so" | sudo tee -a /etc/pam.d/login >/dev/null
+            echo "session optional    pam_gnome_keyring.so auto_start" | sudo tee -a /etc/pam.d/login >/dev/null
+        else
+            echo "/etc/pam.d/login already configured."
+        fi
+    fi
+
+    # 2. /etc/pam.d/sshd (SSHログイン用)
+    if [ -f /etc/pam.d/sshd ]; then
+         if ! grep -q "pam_gnome_keyring.so" /etc/pam.d/sshd; then
+            echo "Adding gnome-keyring to /etc/pam.d/sshd..."
+            echo "auth    optional    pam_gnome_keyring.so" | sudo tee -a /etc/pam.d/sshd >/dev/null
+            echo "session optional    pam_gnome_keyring.so auto_start" | sudo tee -a /etc/pam.d/sshd >/dev/null
+         else
+            echo "/etc/pam.d/sshd already configured."
+         fi
+    fi
+
+    # Keyringディレクトリの作成だけはしておく
+    mkdir -p "$HOME/.local/share/keyrings"
+}
+
 # ==========================================
 # Main Execution Flow
 # ==========================================
@@ -224,6 +270,7 @@ install_python_env
 install_node_env
 install_binaries
 apply_dotfiles
+configure_pam_keyring
 
 log "✨ 全てのセットアップが完了しました。"
 log "シェルを再起動するか、'source ~/.bashrc' を実行してください。"
